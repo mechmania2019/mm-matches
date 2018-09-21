@@ -1,0 +1,11 @@
+{
+    "public": true,
+    "alias": "matches.mechmania.io",
+    "type": "docker",
+    "features": {
+      "cloud": "v2"
+    },
+    "env": {
+      "MONGO_URL": "@mongo"
+    }
+  }
