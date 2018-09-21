@@ -33,11 +33,11 @@ module.exports = authenticate(async (req, res) => {
     oponents.map(oponent => Script.findOne({ key: { $regex: oponent } }))
   );
 
-  let oponentTeamNames = await Promise.all(
-    oponentsNames.map(
-      oponentsName => Team.findOne({ latestScript: oponentsName.key }).name
-    )
-  );
+//   let oponentTeamNames = await Promise.all(
+//     oponentsNames.map(
+//       oponentsName => Team.findOne({ latestScript: oponentsName.key }).name
+//     )
+//   );
 
   return oponentsNames;
 });
