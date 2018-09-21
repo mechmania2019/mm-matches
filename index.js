@@ -15,11 +15,11 @@ module.exports = authenticate(async (req, res) => {
   const wins = matches.map(
     match =>
       match.winner === 3
-        ? "tie"
+        ? "tied"
         : (match.key.split(":")[1] === match.winner && match.winner == 2) ||
           (match.key.split(":")[1] !== match.winner && match.winner == 1)
-          ? "winner"
-          : "loser"
+          ? "won"
+          : "lost"
   );
 
   const oponents = matches.map(match =>
@@ -33,11 +33,10 @@ module.exports = authenticate(async (req, res) => {
     oponents.map(oponent => Script.findOne({ key: { $regex: oponent } }))
   );
 
-//   let oponentTeamNames = await Promise.all(
-//     oponentsNames.map(
-//       oponentsName => Team.findOne({ latestScript: oponentsName.key }).name
-//     )
-//   );
+  const data = {
+    wins: wins,
+    oponentInfo: oponentsNames
+  };
 
-  return oponentsNames;
+  return data;
 });
