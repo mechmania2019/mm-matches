@@ -1,42 +1,82 @@
+const { promisify } = require("util");
 const mongoose = require("mongoose");
-const authenticate = require("mm-authenticate")(mongoose);
 const { send } = require("micro");
-const { Script, Match } = require("mm-schemas")(mongoose);
+const { router, get } = require("microrouter");
+const authenticate = require("mm-authenticate")(mongoose);
+const { Script, Match, Team } = require("mm-schemas")(mongoose);
+
+const AWS = require("aws-sdk");
+
+const s3 = new AWS.S3({
+  params: { Bucket: "mechmania" }
+});
 
 mongoose.connect(process.env.MONGO_URL);
 mongoose.Promise = global.Promise;
 
-module.exports = authenticate(async (req, res) => {
-  const team = req.user;
-  console.log(`${team.name} - Getting matches`);
-  const script = await Script.findById(team.latestScript).exec();
+const getObject = promisify(s3.getObject.bind(s3));
 
-  const matches = await Match.find({ key: { $regex: script.key } }).exec();
-  const wins = matches.map(
-    match =>
-      match.winner === 3
-        ? "tied"
-        : (match.key.split(":")[1] === match.winner && match.winner == 2) ||
-          (match.key.split(":")[1] !== match.winner && match.winner == 1)
-          ? "won"
-          : "lost"
-  );
+async function getCompetitors() {
+  let teams = await Team.find()
+    .populate("latestScript")
+    .exec();
+  return teams;
+}
 
-  const oponents = matches.map(match =>
-    match.key
-      .replace(":", "")
-      .replace("logs/", "")
-      .replace(script.key, "")
-  );
+const getMatchKey = (me, other) => {
+  const [p1, p2] = [me, other].sort();
+  return `logs/${p1}:${p2}`;
+};
 
-  let oponentsNames = await Promise.all(
-    oponents.map(oponent => Script.findOne({ key: { $regex: oponent } }))
-  );
+module.exports = authenticate(
+  router(
+    get("/matches/:script", async (req, res) => {
+      const team = req.user;
+      const script = req.params.script;
+      console.log(
+        `${team.name} - Getting competitor scripts against ${script}`
+      );
+      const matchKeyObjects = competitors.map(team => ({
+        opponent: team.name,
+        key: getMatchKey(script, team.latestScript.key)
+      }));
 
-  const data = {
-    wins: wins,
-    oponentInfo: oponentsNames
-  };
+      const matchToTeamName = {};
+      matchKeyObjects.forEach(({ key, opponent }) => {
+        matchToTeamName[key] = opponent;
+      });
 
-  return data;
-});
+      const matches = await Match.find({
+        key: { $in: matchKeyObjects.map(({ key }) => key) }
+      }).exec();
+      return matches.map(m => ({
+        match: m,
+        opponent: matchToTeamName[m.key]
+      }));
+    }),
+    get("/:key", async (req, res) => {
+      const team = req.user;
+      const key = req.params.key.trim();
+
+      console.log(`${team.name} - Getting team names ${key}`);
+      const [s1, s2] = key.slice("logs/".length).split(":");
+      const scripts = await Promise.all(
+        [s1, s2].map(s =>
+          Script.findOne({ key: s })
+            .populate("owner")
+            .exec()
+        )
+      );
+
+      console.log(`${team.name} - Got team names`);
+      console.log(scripts);
+
+      console.log(`${team.name} - Sending headers`);
+      res.setHeader("X-team-1", scripts[0].owner.name);
+      res.setHeader("X-team-2", scripts[1].owner.name);
+
+      console.log(`${team.name} - Getting logfile ${key}`);
+      return s3.getObject({ Key: key }).createReadStream();
+    })
+  )
+);
