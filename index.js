@@ -28,6 +28,18 @@ const getMatchKey = (me, other) => {
   return `logs/${p1}:${p2}`;
 };
 
+const status = ({ key, winner }, me) => {
+  const p2 = key.split(":")[1];
+  if (winner === 3) {
+    return "tie";
+  }
+  if (p2 === me) {
+    return winner === 2 ? "win" : "loss";
+  } else {
+    return winner === 1 ? "win" : "loss";
+  }
+};
+
 module.exports = authenticate(
   router(
     get("/matches/:script", async (req, res) => {
@@ -36,6 +48,10 @@ module.exports = authenticate(
       console.log(
         `${team.name} - Getting competitor scripts against ${script}`
       );
+      const competitors = (await getCompetitors()).filter(
+        team => team.latestScript && team.latestScript.key !== script
+      );
+
       const matchKeyObjects = competitors.map(team => ({
         opponent: team.name,
         key: getMatchKey(script, team.latestScript.key)
@@ -51,7 +67,8 @@ module.exports = authenticate(
       }).exec();
       return matches.map(m => ({
         match: m,
-        opponent: matchToTeamName[m.key]
+        opponent: matchToTeamName[m.key],
+        result: status(m, script)
       }));
     }),
     get("/:key", async (req, res) => {
