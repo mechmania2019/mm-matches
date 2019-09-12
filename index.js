@@ -1,9 +1,10 @@
 const { promisify } = require("util");
 const mongoose = require("mongoose");
-const { send } = require("micro");
 const { router, get } = require("microrouter");
 const authenticate = require("mm-authenticate")(mongoose);
 const { Script, Match, Team } = require("mm-schemas")(mongoose);
+
+const send = (res, status, data) => (res.statusCode = status, res.end(data));
 
 const AWS = require("aws-sdk");
 
