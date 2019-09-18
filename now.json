@@ -1,6 +1,5 @@
 {
   "public": true,
-  "alias": "matches.mechmania.io",
   "env": {
     "MONGO_URL": "@mongo-url",
     "AWSACCESSKEYID": "@awsaccesskeyid",

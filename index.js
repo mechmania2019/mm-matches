@@ -1,10 +1,8 @@
-const { promisify } = require("util");
+// const { promisify } = require("util");
 const mongoose = require("mongoose");
 const { router, get } = require("microrouter");
 const authenticate = require("mm-authenticate")(mongoose);
 const { Script, Match, Team } = require("mm-schemas")(mongoose);
-
-const send = (res, status, data) => (res.statusCode = status, res.end(data));
 
 const AWS = require("aws-sdk");
 
@@ -14,8 +12,6 @@ const s3 = new AWS.S3({
 
 mongoose.connect(process.env.MONGO_URL);
 mongoose.Promise = global.Promise;
-
-const getObject = promisify(s3.getObject.bind(s3));
 
 async function getCompetitors() {
   let teams = await Team.find()
