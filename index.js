@@ -11,9 +11,6 @@ AWS.config.update({
   'secretAccessKey': process.env.MM_AWS_SECRET_ACCESS_KEY,
 });
 
-console.log(process.env.MM_AWS_SECRET_KEY_ID);
-console.log(process.env.MM_AWS_SECRET_ACCESS_KEY);
-
 const s3 = new AWS.S3({
   params: { Bucket: "mechmania2019" }
 });
@@ -35,7 +32,7 @@ const getMatchKey = (me, other) => {
 
 const status = ({ key, winner }, me) => {
   const p2 = key.split(":")[1];
-  if (winner === 3) {
+  if (winner === 0) {
     return "tie";
   }
   if (p2 === me) {
@@ -47,14 +44,12 @@ const status = ({ key, winner }, me) => {
 
 module.exports = authenticate(
   async (req, res) => {
-    console.log(process.env.MM_AWS_SECRET_KEY_ID);
-    console.log(process.env.MM_AWS_SECRET_ACCESS_KEY);
     console.log(req.url);
     if (req.url.startsWith("/matches/")) {
       const team = req.user;
       const script = req.url.slice("/matches/".length);
       console.log(
-        `${team.name} - Getting competitor scripts again ${script}`
+        `${team.name} - Getting competitor scripts against ${script}`
       );
       const competitors = (await getCompetitors()).filter(
         team => team.latestScript && team.latestScript.key !== script
@@ -73,6 +68,7 @@ module.exports = authenticate(
       const matches = await Match.find({
         key: { $in: matchKeyObjects.map(({ key }) => key) }
       }).exec();
+      console.log(matches);
       send(res, 200, JSON.stringify(
         matches.map(m => ({
           match: m,
@@ -82,6 +78,7 @@ module.exports = authenticate(
     } else if (req.url.startsWith("/")) {
       const team = req.user;
       const key = req.url.slice(1).trim();
+      console.log(key);
 
       console.log(`${team.name} - Getting team names ${key}`);
       const [s1, s2] = key.slice("logs/".length).split(":");
@@ -94,7 +91,6 @@ module.exports = authenticate(
       );
 
       console.log(`${team.name} - Got team names`);
-      console.log(scripts);
 
       console.log(`${team.name} - Sending headers`);
       res.setHeader("X-team-1", scripts[0].owner.name);
