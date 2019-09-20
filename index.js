@@ -9,14 +9,16 @@ const AWS = require("aws-sdk");
 AWS.config.update({
   'accessKeyId': process.env.MM_AWS_SECRET_KEY_ID,
   'secretAccessKey': process.env.MM_AWS_SECRET_ACCESS_KEY,
-  'bucketname': "mechmania2019"
 });
+
+console.log(process.env.MM_AWS_SECRET_KEY_ID);
+console.log(process.env.MM_AWS_SECRET_ACCESS_KEY);
 
 const s3 = new AWS.S3({
   params: { Bucket: "mechmania2019" }
 });
 
-mongoose.connect(process.env.MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(process.env.MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true });
 mongoose.Promise = global.Promise;
 
 async function getCompetitors() {
@@ -45,6 +47,8 @@ const status = ({ key, winner }, me) => {
 
 module.exports = authenticate(
   async (req, res) => {
+    console.log(process.env.MM_AWS_SECRET_KEY_ID);
+    console.log(process.env.MM_AWS_SECRET_ACCESS_KEY);
     console.log(req.url);
     if (req.url.startsWith("/matches/")) {
       const team = req.user;
@@ -71,35 +75,36 @@ module.exports = authenticate(
       }).exec();
       send(res, 200, JSON.stringify(
         matches.map(m => ({
-        match: m,
-        opponent: matchToTeamName[m.key],
-        result: status(m, script)
-      }))));
+          match: m,
+          opponent: matchToTeamName[m.key],
+          result: status(m, script)
+        }))));
     } else if (req.url.startsWith("/")) {
-      async (req, res) => {
-        const team = req.user;
-        const key = req.url.slice(1).trim();
+      const team = req.user;
+      const key = req.url.slice(1).trim();
 
-        console.log(`${team.name} - Getting team names ${key}`);
-        const [s1, s2] = key.slice("logs/".length).split(":");
-        const scripts = await Promise.all(
-          [s1, s2].map(s =>
-            Script.findOne({ key: s })
-              .populate("owner")
-              .exec()
-          )
-        );
+      console.log(`${team.name} - Getting team names ${key}`);
+      const [s1, s2] = key.slice("logs/".length).split(":");
+      const scripts = await Promise.all(
+        [s1, s2].map(s =>
+          Script.findOne({ key: s })
+            .populate("owner")
+            .exec()
+        )
+      );
 
-        console.log(`${team.name} - Got team names`);
-        console.log(scripts);
+      console.log(`${team.name} - Got team names`);
+      console.log(scripts);
 
-        console.log(`${team.name} - Sending headers`);
-        res.setHeader("X-team-1", scripts[0].owner.name);
-        res.setHeader("X-team-2", scripts[1].owner.name);
+      console.log(`${team.name} - Sending headers`);
+      res.setHeader("X-team-1", scripts[0].owner.name);
+      res.setHeader("X-team-2", scripts[1].owner.name);
 
-        console.log(`${team.name} - Getting logfile ${key}`);
-        return s3.getObject({ Key: key }).createReadStream();
-      }
+      console.log(`${team.name} - Getting logfile ${key}`);
+      res.statusCode = 200;
+      s3.getObject({ Key: key }).createReadStream().pipe(res);
+    } else {
+      send(res, 404, "wut?");
     }
   }
 );
