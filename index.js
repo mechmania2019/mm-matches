@@ -48,6 +48,10 @@ const status = ({ key, winner }, me) => {
 
 module.exports = authenticate(async (req, res) => {
   console.log(req.url);
+  if (!req.headers || !req.headers["x-admin"]) {
+    send(res, 401, "This is disabled during the tournament");
+    return;
+  }
   if (req.url.startsWith("/matches/")) {
     const team = req.user;
     const script = req.url.slice("/matches/".length);
