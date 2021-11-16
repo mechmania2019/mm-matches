@@ -4,7 +4,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "aws-sdk": "2.203.0",
+    "aws-sdk": "2.814.0",
     "mm-authenticate": "0.0.10",
     "mm-schemas": "0.0.10",
     "mongoose": "5.7.1"
